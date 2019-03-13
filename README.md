@@ -1,4 +1,4 @@
-![](logo.png)
+![WP Tools](banner.png)
 
 ---
 
