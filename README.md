@@ -44,117 +44,83 @@ require_once 'wp-tools/wp-tools.php';
 require_once 'my-plugin/my-plugin.php';
 ```
 
-## Custom Fields
+## Fields
 
 A layer on top of [ACF](http://www.advancedcustomfields.com/) to help programmatically create, update, and get custom field values.
 
-#### Register
+#### Register Field Group
 
-```
-function register_custom_fields()
+```php
+<?php
+function register_fields()
 {
-  CustomFields::register(
-    'my_custom_fields', // id
-    'My Custom Fields', // title
-    // fields
-    array(
-      CustomFields::text_field('title', 'Title', array(
-        'instructions' => 'This is a custom title.',
-      )),
-      CustomFields::textarea_field('description', 'Description', array(
-        'instructions' => 'This is a custom description.',
-        'maxlength' => 256,
-        'rows' => 6,
-      )),
-      CustomFields::repeater_field('sub_fields', 'Sub Fields', array(
-        CustomFields::text_field('sub_field_1', 'Sub Field 1'),
-        CustomFields::text_field('sub_field_2', 'Sub Field 2'),
-        CustomFields::text_field('sub_field_3', 'Sub Field 3'),
-      )),
-    ),
-    // location
-    array(
-      array(
-        array(
-          'param' => 'page_template',
-          'operator' => '==',
-          'value' => 'default',
-        )
-      )
-    ),
-    // options
-    array(
-      'position' => 'normal',
-      'layout' => 'default',
-      'hide_on_screen' => CustomFields::$hide_all_on_screen,
-    )
-  );
+  $group = new FieldGroup('group_name', 'Group Name');
+  $group->field('text', 'heading', 'Heading');
+  $group->field('textarea', 'description', 'Description');
+  $group->field('repeater', 'items', 'Items')
+        ->sub_field('post_object', 'item', 'Item', [ 'post_type' => 'item' ])
+        ->sub_field('true_false', 'is_visible', 'Visibility', [
+          'default_value' => 1,
+          'message' => 'Should we temporarily hide this?',
+          'ui' => 1,
+          'ui_on_text' => 'Visible',
+          'ui_off_text' => 'Hidden',
+        ]);
+  $group->location('post_type', 'page');
+  $group->options(['style' => 'seamless']);
+  $group->register();
 }
 
-add_action('init', 'register_custom_fields');
+add_action('init', 'register_fields');
 ```
 
-#### Update
+#### Get Field Value
 
-Because the native [update_field](http://www.advancedcustomfields.com/resources/update_field/) method requires a field key you should use the `CustomFields::update_field` helper method which converts the provided field name into a field key.
-
-```
+```php
+<?php
 $post = get_post();
-CustomFields::update_field('name', 'value', $post->ID);
+Field::get($post->ID,'group_name', 'heading');
+Field::get($post->ID,'group_name', 'description');
+Field::get($post->ID,'group_name', 'items');
 ```
 
-#### Get
+#### Update Field Value
 
-You can use the native [get_field](http://www.advancedcustomfields.com/resources/get_field/) method to retrieve field values which accepts both a field name and field key.
-
-```
+```php
+<?php
 $post = get_post();
-get_field('name', $post->ID);
+Field::update($post->ID, 'group_name', 'heading', 'This is a heading');
+Field::update($post->ID, 'group_name', 'description', 'The quick brown fox jumps over the lazy dog.');
+Field::update_sub_field($post->ID, 'group_name', 'items', 'item', 0, 'First Item Value');
+Field::update_sub_field($post->ID, 'group_name', 'items', 'item', 0, 'Second Item Value');
+Field::update_sub_field($post->ID, 'group_name', 'items', 'item', 0, 'Third Item Value');
 ```
 
-You may also use the provided `CustomFields::get_field` helper method which converts the provided field name into a field key.
-
-```
-$post = get_post();
-CustomFields::get_field('name', $post->ID);
-```
-
-#### Remove Admin Menu
-
-```
-function remove_acf_menu()
-{
-  remove_menu_page('edit.php?post_type=acf');
-}
-
-add_action('admin_menu', 'remove_acf_menu', 999);
-```
-
-## Custom Post Types
+## Post Types
 
 A layer on top of the WordPress [register_post_type](https://codex.wordpress.org/Function_Reference/register_post_type) function to help simplify and normalize the process.
 
 #### Register
 
-```
-function register_custom_post_types()
+```php
+<?php
+function register_post_types()
 {
-  PostTypes::register('my_custom_post_type', array(
+  PostType::register('my_post_type', array(
     'single' => array(
-      'lower' => 'my custom post type',
-      'upper' => 'My Custom Post Type',
+      'lower' => 'my post type',
+      'upper' => 'My Post Type',
     ),
     'plural' => array(
-      'lower' => 'my custom post types',
-      'upper' => 'My Custom Post Types',
+      'lower' => 'my post types',
+      'upper' => 'My Post Types',
     ),
   ), array(
-    // https://developer.wordpress.org/resource/dashicons/
     'menu_icon' => 'dashicons-admin-site',
   ));
 }
 
-add_action('init', 'register_custom_post_types');
+add_action('init', 'register_post_types');
 ```
 
 ## Taxonomy
@@ -163,10 +129,11 @@ A layer on top of the WordPress [register_taxonomy](https://codex.wordpress.org/
 
 #### Register
 
-```
+```php
+<?php
 function register_taxonomies()
 {
-  Taxonomy::register('my_taxonomy', 'my_custom_post_type', array(
+  Taxonomy::register('my_taxonomy', 'my_post_type', array(
     'single' => array('upper' => 'My Taxonomy'),
     'plural' => array('upper' => 'My Taxonomies'),
   ));
@@ -179,7 +146,8 @@ add_action('init', 'register_taxonomies');
 
 While taxonomies must be constantly registered, taxonomy terms should only be inserted once or they duplicate.
 
-```
+```php
+<?php
 function add_taxonomy_terms()
 {
   $key = 'taxonomy_terms_added';
@@ -199,7 +167,8 @@ add_action('admin_init', 'add_taxonomy_terms');
 
 #### Query Usage
 
-```
+```php
+<?php
 $tax_query = array();
 $tax_query[] = array(
   'taxonomy' => 'my_taxonomy',
@@ -213,7 +182,7 @@ $tax_query[] = array(
 );
 
 $args = array(
-  'post_type'      => 'my_custom_post_type',
+  'post_type'      => 'my_post_type',
   'post_status'    => 'publish',
   'posts_per_page' => -1,
   'tax_query'      => $tax_query,
@@ -228,7 +197,8 @@ A layer on top of the WordPress [customize_register](https://codex.wordpress.org
 
 Example Usage:
 
-```
+```php
+<?php
 function register_custom_options(WP_Customize_Manager $wp_customize)
 {
   Customizer::add_section($wp_customize, 'my_customizer_section', array(
@@ -253,13 +223,14 @@ A helper class that shows admin notices on page refresh.
 
 Example Usage:
 
-```
+```php
+<?php
 function validate_post_data($data, $postarr)
 {
   $error = false;
 
   $post_type = $data['post_type'];
-  if ($post_type != 'my_custom_post_type') return $data;
+  if ($post_type != 'my_post_type') return $data;
 
   if (empty($postarr['post_title'])) {
     Notice::error('Please provide a post title.');

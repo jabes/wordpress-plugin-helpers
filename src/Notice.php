@@ -2,6 +2,7 @@
 
 class Notice
 {
+
   const transient = 'admin_notice';
 
   static function add($class, $message, $domain = 'default')

@@ -13,7 +13,7 @@ class Taxonomy
     $taxonomy = str_replace(' ', '_', $taxonomy);
     $taxonomy = preg_replace("/[^a-z_]/", '', $taxonomy);
 
-    $labels = array(
+    $labels = [
       'name'              => _x($language['plural']['upper'], 'taxonomy general name', $domain),
       'singular_name'     => _x($language['single']['upper'], 'taxonomy singular name', $domain),
       'search_items'      => __('Search ' . $language['plural']['upper'], $domain),
@@ -25,19 +25,19 @@ class Taxonomy
       'add_new_item'      => __('Add New ' . $language['single']['upper'], $domain),
       'new_item_name'     => __('New ' . $language['single']['upper'] . ' Name', $domain),
       'menu_name'         => __($language['single']['upper'], $domain),
-    );
+    ];
 
-    $args = array(
+    $args = [
       'labels'            => $labels,
       'description'       => '',
       'public'            => true,
-      'hierarchical'      => false,
+      'hierarchical'      => true,
       'show_ui'           => true,
       'show_admin_column' => true,
-      'capabilities'      => array(),
+      'capabilities'      => [],
       'rewrite'           => true,
       'query_var'         => $taxonomy,
-    );
+    ];
 
     if ($custom_args) $args = array_merge($args, $custom_args);
     return register_taxonomy($taxonomy, $object_type, $args);
